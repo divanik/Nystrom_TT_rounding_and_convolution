@@ -60,3 +60,55 @@ def partialContractionsLRKronecker(
         p = cronMulVecR(tt1L, tt1R, answer[-1])
         answer.append(np.einsum('udl,abdu->abl', tt2, p))
     return answer
+
+
+def _countPsiTensor(left_tensor: np.array, tt_kernel: np.array, right_tensor: np.array):
+    p = np.einsum('ae,abc->ebc', left_tensor, tt_kernel)
+    return np.einsum('ebc,cd->ebd', p, right_tensor)
+
+
+def _countPsiTensorKronecker(left_tensor: np.array, tt_kernel1: np.array, tt_kernel2: np.array, right_tensor: np.array):
+    p = np.einsum('abe,anc->ebnc', left_tensor, tt_kernel1)
+    q = np.einsum('cdf,bnd->cbnf', tt_kernel2, right_tensor)
+    return np.einsum('ebnc,cbnf->enf', p, q)
+
+
+def countPsiTensors(
+    left_contractions: typing.List[np.array],
+    tt_tensor: typing.List[np.array],
+    right_contractions: typing.List[np.array],
+):
+    modes = primitives.countModes(tt_tensor)
+    psi_tensors = []
+    for i in range(len(modes)):
+        psi_tensors.append(_countPsiTensor(left_contractions[i], tt_tensor[i], right_contractions[i + 1]))
+    return psi_tensors
+
+
+def countPsiTensorsKronecker(
+    left_contractions: typing.List[np.array],
+    tt_tensor1: typing.List[np.array],
+    tt_tensor2: typing.List[np.array],
+    right_contractions: typing.List[np.array],
+):
+    modes = primitives.countModes(tt_tensor1)
+    psi_tensors = []
+    for i in range(len(modes)):
+        psi_tensors.append(
+            _countPsiTensorKronecker(left_contractions[i], tt_tensor1[i], tt_tensor2[i], right_contractions[i + 1])
+        )
+    return psi_tensors
+
+
+def countPhiTensors(left_contractions: typing.List[np.array], right_contractions: typing.List[np.array]):
+    phi_tensors = []
+    for i in range(1, len(left_contractions) - 1):
+        phi_tensors.append(np.einsum('ax,ay->xy', left_contractions[i], right_contractions[i]))
+    return phi_tensors
+
+
+def countPhiTensorsKronecker(left_contractions: typing.List[np.array], right_contractions: typing.List[np.array]):
+    phi_tensors = []
+    for i in range(1, len(left_contractions) - 1):
+        phi_tensors.append(np.einsum('abx,aby->xy', left_contractions[i], right_contractions[i]))
+    return phi_tensors
