@@ -88,6 +88,19 @@ def _twoSidedRounding(
     right_contractions = contraction.partialContractionsRL(tt_tensors, right_random_tensor)
     psi_tensors = contraction.countPsiTensors(left_contractions, tt_tensors, right_contractions)
     phi_tensors = contraction.countPhiTensors(left_contractions, right_contractions)
+    print("PSI!!")
+    print(psi_tensors)
+    print()
+    print()
+    print("PHI!!")
+    print(phi_tensors)
+    print()
+    print()
+    print("KEK!!")
+    print()
+    print()
+    for phi_tensor in phi_tensors:
+        print(np.linalg.svd(phi_tensor)[1])
     return (
         pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors)
         if leave_left

@@ -54,12 +54,12 @@ def generalizedTwoSidedHadamardProduct(
     right_random_tensor: np.array,
     leave_left: bool,
 ):
-    if not leave_left:
-        desired_ranks, auxiliary_ranks = auxiliary_ranks, desired_ranks
     left_contractions = contraction.partialContractionsLRKronecker(tt_tensors1, tt_tensors2, left_random_tensor)
     right_contractions = contraction.partialContractionsRLKronecker(tt_tensors1, tt_tensors2, right_random_tensor)
     psi_tensors = contraction.countPsiTensorsKronecker(left_contractions, tt_tensors1, tt_tensors2, right_contractions)
+    print(psi_tensors)
     phi_tensors = contraction.countPhiTensorsKronecker(left_contractions, right_contractions)
+    print(phi_tensors)
     return (
         pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors)
         if leave_left

@@ -57,7 +57,7 @@ def partialContractionsLRKronecker(
 ):
     answer = [np.ones((1, 1, 1))]
     for tt1L, tt1R, tt2 in zip(tt_tensors1L, tt_tensors1R, tt_tensors2):
-        p = cronMulVecR(tt1L, tt1R, answer[-1])
+        p = cronMulVecL(tt1L, tt1R, answer[-1])
         answer.append(np.einsum('udl,abdu->abl', tt2, p))
     return answer
 
@@ -69,7 +69,7 @@ def _countPsiTensor(left_tensor: np.array, tt_kernel: np.array, right_tensor: np
 
 def _countPsiTensorKronecker(left_tensor: np.array, tt_kernel1: np.array, tt_kernel2: np.array, right_tensor: np.array):
     p = np.einsum('abe,anc->ebnc', left_tensor, tt_kernel1)
-    q = np.einsum('cdf,bnd->cbnf', tt_kernel2, right_tensor)
+    q = np.einsum('bnd,cdf->cbnf', tt_kernel2, right_tensor)
     return np.einsum('ebnc,cbnf->enf', p, q)
 
 

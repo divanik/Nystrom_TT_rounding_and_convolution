@@ -1,0 +1,1 @@
+from algorithms_package.tests import test_contraction, test_primitives, test_hadamard_product, test_convolution
