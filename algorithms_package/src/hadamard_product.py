@@ -1,11 +1,14 @@
 import typing
 import logging
 import numpy as np
+import time
 
 from algorithms_package.src.contraction import cronMulVecL, partialContractionsRLKronecker
 from algorithms_package.src import contraction, random_tensor_generation, pseudoinverse_primitives
 from algorithms_package.src.random_tensor_generation import createRandomTensor
 from algorithms_package.src import primitives
+
+from joblib import Parallel, delayed
 
 
 def preciseHadamardProduct(tt_tensors1: typing.List[np.array], tt_tensors2: typing.List[np.array]):
@@ -53,17 +56,28 @@ def generalizedTwoSidedHadamardProduct(
     left_random_tensor: np.array,
     right_random_tensor: np.array,
     leave_left: bool,
+    n_jobs: int,
 ):
-    left_contractions = contraction.partialContractionsLRKronecker(tt_tensors1, tt_tensors2, left_random_tensor)
-    right_contractions = contraction.partialContractionsRLKronecker(tt_tensors1, tt_tensors2, right_random_tensor)
-    psi_tensors = contraction.countPsiTensorsKronecker(left_contractions, tt_tensors1, tt_tensors2, right_contractions)
-    print(psi_tensors)
-    phi_tensors = contraction.countPhiTensorsKronecker(left_contractions, right_contractions)
-    print(phi_tensors)
+    if n_jobs == 1:
+        left_contractions = contraction.partialContractionsLRKronecker(tt_tensors1, tt_tensors2, left_random_tensor)
+        right_contractions = contraction.partialContractionsRLKronecker(tt_tensors1, tt_tensors2, right_random_tensor)
+    else:
+        contractions = Parallel(n_jobs=2)(
+            [
+                delayed(contraction.partialContractionsLRKronecker)(tt_tensors1, tt_tensors2, left_random_tensor),
+                delayed(contraction.partialContractionsRLKronecker)(tt_tensors1, tt_tensors2, right_random_tensor),
+            ]
+        )
+        left_contractions = contractions[0]
+        right_contractions = contractions[1]
+    psi_tensors = contraction.countPsiTensorsKronecker(
+        left_contractions, tt_tensors1, tt_tensors2, right_contractions, n_jobs
+    )
+    phi_tensors = contraction.countPhiTensorsKronecker(left_contractions, right_contractions, n_jobs)
     return (
-        pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors)
+        pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors, n_jobs)
         if leave_left
-        else pseudoinverse_primitives.processTensorsTakeRight(psi_tensors, phi_tensors)
+        else pseudoinverse_primitives.processTensorsTakeRight(psi_tensors, phi_tensors, n_jobs)
     )
 
 
@@ -82,6 +96,7 @@ def approximateTwoSidedHadamardProduct(
     auxiliary_ranks: typing.List[np.array],
     seed: int,
     leave_left=True,
+    n_jobs=1,
 ):
     modes = primitives.countModes(tt_tensors1)
     if not leave_left:
@@ -89,32 +104,5 @@ def approximateTwoSidedHadamardProduct(
     left_random_tensor = random_tensor_generation.createRandomTensor(modes, desired_ranks, seed)
     right_random_tensor = random_tensor_generation.createRandomTensor(modes, auxiliary_ranks, seed)
     return generalizedTwoSidedHadamardProduct(
-        tt_tensors1, tt_tensors2, left_random_tensor, right_random_tensor, leave_left
+        tt_tensors1, tt_tensors2, left_random_tensor, right_random_tensor, leave_left, n_jobs
     )
-
-
-# def twoSidedRoundingHadamardProduct(
-#     tt_tensors: typing.List[np.array],
-#     desired_ranks: typing.List[np.array],
-#     auxiliary_ranks: typing.List[np.array],
-#     seed: int,
-#     leave_left=True,
-# ):
-#     modes = primitives.countModes(tt_tensors)
-#     if not leave_left:
-#         desired_ranks, auxiliary_ranks = auxiliary_ranks, desired_ranks
-#     left_random_tensor = random_tensor_generation.createRandomTensor(modes, desired_ranks, seed)
-#     right_random_tensor = random_tensor_generation.createRandomTensor(modes, auxiliary_ranks, seed)
-#     left_contractions = contraction.partialContractionsLR(tt_tensors, left_random_tensor)
-#     right_contractions = contraction.partialContractionsRL(tt_tensors, right_random_tensor)
-#     psi_tensors = []
-#     for i in range(len(modes)):
-#         p = np.einsum('ae,abc->ebc', left_contractions[i], tt_tensors[i])
-#         psi_tensors.append(np.einsum('ebc,cd->ebd', p, right_contractions[i + 1]))
-#     phi_tensors = []
-#     for i in range(1, len(modes)):
-#         phi_tensors.append(left_contractions[i].T @ right_contractions[i])
-#     if leave_left:
-#         return pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors)
-#     else:
-#         return pseudoinverse_primitives.processTensorsTakeRight(psi_tensors, phi_tensors)
