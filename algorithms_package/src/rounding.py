@@ -6,6 +6,7 @@ from algorithms_package.src import (
     random_tensor_generation,
     pseudoinverse_primitives,
 )
+from time import time
 
 
 # def ttRoundingWithRanks(tt_tensors: typing.List[np.array], desired_ranks: typing.List[int]):
@@ -73,9 +74,15 @@ def twoSidedRounding(
     modes = primitives.countModes(tt_tensors)
     if not leave_left:
         desired_ranks, auxiliary_ranks = auxiliary_ranks, desired_ranks
+    time0 = time()
     left_random_tensor = random_tensor_generation.createRandomTensor(modes, desired_ranks, seed)
+    time1 = time()
     right_random_tensor = random_tensor_generation.createRandomTensor(modes, auxiliary_ranks, seed)
-    return _twoSidedRounding(tt_tensors, left_random_tensor, right_random_tensor, leave_left)
+    time2 = time()
+    answer, times_dict = _twoSidedRounding(tt_tensors, left_random_tensor, right_random_tensor, leave_left)
+    times_dict['left_random'] = time1 - time0
+    times_dict['right_random'] = time2 - time1
+    return answer, times_dict
 
 
 def _twoSidedRounding(
@@ -84,12 +91,22 @@ def _twoSidedRounding(
     right_random_tensor: np.array,
     leave_left: bool,
 ):
+    times_dict = {}
+    time0 = time()
     left_contractions = contraction.partialContractionsLR(tt_tensors, left_random_tensor)
+    time1 = time()
     right_contractions = contraction.partialContractionsRL(tt_tensors, right_random_tensor)
-    psi_tensors = contraction.countPsiTensors(left_contractions, tt_tensors, right_contractions)
-    phi_tensors = contraction.countPhiTensors(left_contractions, right_contractions)
-    return (
+    time2 = time()
+    times_dict['left_contraction'] = time1 - time0
+    times_dict['right_contraction'] = time2 - time1
+    psi_tensors, psi_times = contraction.countPsiTensors(left_contractions, tt_tensors, right_contractions)
+    phi_tensors, phi_times = contraction.countPhiTensors(left_contractions, right_contractions)
+    answer, times = (
         pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors)
         if leave_left
         else pseudoinverse_primitives.processTensorsTakeRight(psi_tensors, phi_tensors)
     )
+    times_dict['psi'] = psi_times
+    times_dict['phi'] = phi_times
+    times_dict['invert'] = times
+    return answer, times_dict

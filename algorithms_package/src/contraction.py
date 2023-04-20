@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from algorithms_package.src import primitives
 from joblib import Parallel, delayed
+from time import time
 
 from numpy.linalg import lstsq
 
@@ -86,17 +87,15 @@ def countPsiTensors(
     left_contractions: typing.List[np.array],
     tt_tensor: typing.List[np.array],
     right_contractions: typing.List[np.array],
-    n_jobs,
 ):
     modes = primitives.countModes(tt_tensor)
-    return (
-        Parallel(n_jobs=n_jobs)(
-            delayed(_countPsiTensor)(left_contractions[i], tt_tensor[i], right_contractions[i + 1])
-            for i in range(len(modes))
-        )
-        if n_jobs > 1
-        else [_countPsiTensor(left_contractions[i], tt_tensor[i], right_contractions[i + 1]) for i in range(len(modes))]
-    )
+    times = []
+    answer = []
+    for i in range(len(modes)):
+        time_begin = time()
+        answer.append(_countPsiTensor(left_contractions[i], tt_tensor[i], right_contractions[i + 1]))
+        times.append(time() - time_begin)
+    return answer, times
 
 
 def countPsiTensorsKronecker(
@@ -104,48 +103,35 @@ def countPsiTensorsKronecker(
     tt_tensor1: typing.List[np.array],
     tt_tensor2: typing.List[np.array],
     right_contractions: typing.List[np.array],
-    n_jobs,
 ):
+
     modes = primitives.countModes(tt_tensor1)
-    return (
-        Parallel(n_jobs=n_jobs)(
-            delayed(_countPsiTensorKronecker)(
-                left_contractions[i], tt_tensor1[i], tt_tensor2[i], right_contractions[i + 1]
-            )
-            for i in range(len(modes))
-        )
-        if n_jobs > 1
-        else [
+    times = []
+    answer = []
+    for i in range(len(modes)):
+        time_begin = time()
+        answer.append(
             _countPsiTensorKronecker(left_contractions[i], tt_tensor1[i], tt_tensor2[i], right_contractions[i + 1])
-            for i in range(len(modes))
-        ]
-    )
-
-
-def countPhiTensors(left_contractions: typing.List[np.array], right_contractions: typing.List[np.array], n_jobs):
-    return (
-        Parallel(n_jobs=n_jobs)(
-            delayed(_countPhiTensor)(left_contractions[i], right_contractions[i])
-            for i in range(1, len(left_contractions) - 1)
         )
-        if n_jobs > 1
-        else [
-            _countPhiTensor(left_contractions[i], right_contractions[i]) for i in range(1, len(left_contractions) - 1)
-        ]
-    )
+        times.append(time() - time_begin)
+    return answer, times
 
 
-def countPhiTensorsKronecker(
-    left_contractions: typing.List[np.array], right_contractions: typing.List[np.array], n_jobs
-):
-    return (
-        Parallel(n_jobs=n_jobs)(
-            delayed(_countPhiTensorKronecker)(left_contractions[i], right_contractions[i])
-            for i in range(1, len(left_contractions) - 1)
-        )
-        if n_jobs > 1
-        else [
-            _countPhiTensorKronecker(left_contractions[i], right_contractions[i])
-            for i in range(1, len(left_contractions) - 1)
-        ]
-    )
+def countPhiTensors(left_contractions: typing.List[np.array], right_contractions: typing.List[np.array]):
+    times = []
+    answer = []
+    for i in range(1, len(left_contractions) - 1):
+        time_begin = time()
+        answer.append(_countPhiTensor(left_contractions[i], right_contractions[i]))
+        times.append(time() - time_begin)
+    return answer, times
+
+
+def countPhiTensorsKronecker(left_contractions: typing.List[np.array], right_contractions: typing.List[np.array]):
+    times = []
+    answer = []
+    for i in range(1, len(left_contractions) - 1):
+        time_begin = time()
+        answer.append(_countPhiTensorKronecker(left_contractions[i], right_contractions[i]))
+        times.append(time() - time_begin)
+    return answer, times

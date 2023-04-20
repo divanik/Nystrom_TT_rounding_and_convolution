@@ -1,6 +1,7 @@
 import typing
 import numpy as np
 from numpy.linalg import lstsq
+from time import time
 
 from algorithms_package.src import primitives
 from joblib import Parallel, delayed
@@ -20,30 +21,25 @@ def processPhiTensorFromLeft(psi_tensor, phi_tensor):
     return lstsq(phi_tensor, R, rcond=1e-10)[0].reshape(new_shape, order='F')
 
 
-def processTensorsTakeLeft(psi_tensors: typing.List[np.array], phi_tensors: typing.List[np.array], n_jobs):
+def processTensorsTakeLeft(psi_tensors: typing.List[np.array], phi_tensors: typing.List[np.array]):
     modes_size = len(primitives.countModes(psi_tensors))
-
-    answer = (
-        Parallel(n_jobs=n_jobs)(
-            delayed(processPhiTensorFromRight)(psi_tensors[i], phi_tensors[i]) for i in range(modes_size - 1)
-        )
-        if n_jobs > 1
-        else [processPhiTensorFromRight(psi_tensors[i], phi_tensors[i]) for i in range(modes_size - 1)]
-    )
+    answer = []
+    times = []
+    for i in range(modes_size - 1):
+        time0 = time()
+        answer.append(processPhiTensorFromRight(psi_tensors[i], phi_tensors[i]))
+        times.append(time() - time0)
     answer.append(psi_tensors[-1])
-    return answer
+    times.append(0)
+    return answer, times
 
 
-def processTensorsTakeRight(psi_tensors: typing.List[np.array], phi_tensors: typing.List[np.array], n_jobs):
+def processTensorsTakeRight(psi_tensors: typing.List[np.array], phi_tensors: typing.List[np.array]):
     modes_size = len(primitives.countModes(psi_tensors))
-    return (
-        Parallel(n_jobs=n_jobs)(
-            delayed(processPhiTensorFromLeft)(psi_tensors[i], phi_tensors[i] if i > 0 else np.ones((1, 1)))
-            for i in range(modes_size)
-        )
-        if n_jobs > 1
-        else [
-            processPhiTensorFromLeft(psi_tensors[i], phi_tensors[i] if i > 0 else np.ones((1, 1)))
-            for i in range(modes_size)
-        ]
-    )
+    answer = [psi_tensors[0]]
+    times = [0]
+    for i in range(1, modes_size):
+        time0 = time()
+        answer.append(processPhiTensorFromLeft(psi_tensors[i], phi_tensors[i]))
+        times.append(time() - time0)
+    return answer, times

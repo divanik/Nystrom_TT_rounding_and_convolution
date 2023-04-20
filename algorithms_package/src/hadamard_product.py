@@ -1,7 +1,7 @@
 import typing
 import logging
 import numpy as np
-import time
+from time import time
 
 from algorithms_package.src.contraction import cronMulVecL, partialContractionsRLKronecker
 from algorithms_package.src import contraction, random_tensor_generation, pseudoinverse_primitives
@@ -56,29 +56,28 @@ def generalizedTwoSidedHadamardProduct(
     left_random_tensor: np.array,
     right_random_tensor: np.array,
     leave_left: bool,
-    n_jobs: int,
 ):
-    if n_jobs == 1:
-        left_contractions = contraction.partialContractionsLRKronecker(tt_tensors1, tt_tensors2, left_random_tensor)
-        right_contractions = contraction.partialContractionsRLKronecker(tt_tensors1, tt_tensors2, right_random_tensor)
-    else:
-        contractions = Parallel(n_jobs=2)(
-            [
-                delayed(contraction.partialContractionsLRKronecker)(tt_tensors1, tt_tensors2, left_random_tensor),
-                delayed(contraction.partialContractionsRLKronecker)(tt_tensors1, tt_tensors2, right_random_tensor),
-            ]
-        )
-        left_contractions = contractions[0]
-        right_contractions = contractions[1]
-    psi_tensors = contraction.countPsiTensorsKronecker(
-        left_contractions, tt_tensors1, tt_tensors2, right_contractions, n_jobs
+    times_dict = {}
+    time0 = time()
+    left_contractions = contraction.partialContractionsLRKronecker(tt_tensors1, tt_tensors2, left_random_tensor)
+    time1 = time()
+    right_contractions = contraction.partialContractionsRLKronecker(tt_tensors1, tt_tensors2, right_random_tensor)
+    time2 = time()
+    times_dict['left_contraction'] = time1 - time0
+    times_dict['right_contraction'] = time2 - time1
+    psi_tensors, psi_times = contraction.countPsiTensorsKronecker(
+        left_contractions, tt_tensors1, tt_tensors2, right_contractions
     )
-    phi_tensors = contraction.countPhiTensorsKronecker(left_contractions, right_contractions, n_jobs)
-    return (
-        pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors, n_jobs)
+    phi_tensors, phi_times = contraction.countPhiTensorsKronecker(left_contractions, right_contractions)
+    answer, times = (
+        pseudoinverse_primitives.processTensorsTakeLeft(psi_tensors, phi_tensors)
         if leave_left
-        else pseudoinverse_primitives.processTensorsTakeRight(psi_tensors, phi_tensors, n_jobs)
+        else pseudoinverse_primitives.processTensorsTakeRight(psi_tensors, phi_tensors)
     )
+    times_dict['psi'] = psi_times
+    times_dict['phi'] = phi_times
+    times_dict['invert'] = times
+    return answer, times_dict
 
 
 def approximateHadamardProduct(
@@ -96,13 +95,18 @@ def approximateTwoSidedHadamardProduct(
     auxiliary_ranks: typing.List[np.array],
     seed: int,
     leave_left=True,
-    n_jobs=1,
 ):
     modes = primitives.countModes(tt_tensors1)
     if not leave_left:
         desired_ranks, auxiliary_ranks = auxiliary_ranks, desired_ranks
+    time0 = time()
     left_random_tensor = random_tensor_generation.createRandomTensor(modes, desired_ranks, seed)
+    time1 = time()
     right_random_tensor = random_tensor_generation.createRandomTensor(modes, auxiliary_ranks, seed)
-    return generalizedTwoSidedHadamardProduct(
-        tt_tensors1, tt_tensors2, left_random_tensor, right_random_tensor, leave_left, n_jobs
+    time2 = time()
+    answer, time_dict = generalizedTwoSidedHadamardProduct(
+        tt_tensors1, tt_tensors2, left_random_tensor, right_random_tensor, leave_left
     )
+    time_dict['left_random'] = time1 - time0
+    time_dict['right_random'] = time2 - time1
+    return answer, time_dict
