@@ -8,6 +8,7 @@ import logging
 def countFourier(tt_tensor: typing.List[np.ndarray]):
     answer = []
     for i in range(len(tt_tensor)):
+        print(tt_tensor[i].shape)
         answer.append(np.fft.fft(tt_tensor[i], axis=1))
     return answer
 
@@ -15,6 +16,7 @@ def countFourier(tt_tensor: typing.List[np.ndarray]):
 def countInverseFourier(tt_tensor: typing.List[np.ndarray]):
     answer = []
     for i in range(len(tt_tensor)):
+        print(tt_tensor[i].shape)
         answer.append(np.fft.ifft(tt_tensor[i], axis=1))
     return answer
 
@@ -97,7 +99,7 @@ def approximateTwoSidedCycleConvolution(
         desired_ranks, auxiliary_ranks = auxiliary_ranks, desired_ranks
     left_random_tensor = random_tensor_generation.createRandomTensor(modes, desired_ranks, seed)
     right_random_tensor = random_tensor_generation.createRandomTensor(modes, auxiliary_ranks, seed)
-    p = hadamard_product.generalizedApproximateHadamardProduct(
+    p, _ = hadamard_product.generalizedTwoSidedHadamardProduct(
         countFourier(tt_tensors1),
         countFourier(tt_tensors2),
         countInverseFourier(left_random_tensor),
