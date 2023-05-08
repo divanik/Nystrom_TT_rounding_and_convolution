@@ -8,7 +8,6 @@ import logging
 def countFourier(tt_tensor: typing.List[np.ndarray]):
     answer = []
     for i in range(len(tt_tensor)):
-        print(tt_tensor[i].shape)
         answer.append(np.fft.fft(tt_tensor[i], axis=1))
     return answer
 
@@ -16,7 +15,6 @@ def countFourier(tt_tensor: typing.List[np.ndarray]):
 def countInverseFourier(tt_tensor: typing.List[np.ndarray]):
     answer = []
     for i in range(len(tt_tensor)):
-        print(tt_tensor[i].shape)
         answer.append(np.fft.ifft(tt_tensor[i], axis=1))
     return answer
 

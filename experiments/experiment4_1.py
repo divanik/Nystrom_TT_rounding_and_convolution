@@ -29,8 +29,8 @@ for d in range(3, 6):
         grid_size = 8 * (grid_side // 8)
         h = (2 * D) / grid_side
         tensor1 = create_exponential_grid(d, grid_side + 2, D + h / 2)
-            tensor2 = create_newtonial_potential_grid(d, 2 * grid_side + 2, h * grid_side + h / 2)
-            tensor1 = primitives.twoSidedPaddingTTTensor(tensor1, [(0, grid_side) for _ in range(d)])
+        tensor2 = create_newtonial_potential_grid(d, 2 * grid_side + 2, h * grid_side + h / 2)
+        tensor1 = primitives.twoSidedPaddingTTTensor(tensor1, [(0, grid_side) for _ in range(d)])
         print(tt.vector.from_list(tensor1))
         print(tt.vector.from_list(tensor2))
         precise = preciseCycleConvolution(tensor1, tensor2)
